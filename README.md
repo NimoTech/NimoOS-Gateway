@@ -1,8 +1,8 @@
-# CasaOS-Gateway
+# NimoOS-Gateway
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/IceWhaleTech/CasaOS-Gateway.svg)](https://pkg.go.dev/github.com/IceWhaleTech/CasaOS-Gateway) [![Go Report Card](https://goreportcard.com/badge/github.com/IceWhaleTech/CasaOS-Gateway)](https://goreportcard.com/report/github.com/IceWhaleTech/CasaOS-Gateway) [![goreleaser](https://github.com/IceWhaleTech/CasaOS-Gateway/actions/workflows/release.yml/badge.svg)](https://github.com/IceWhaleTech/CasaOS-Gateway/actions/workflows/release.yml) [![codecov](https://codecov.io/gh/IceWhaleTech/CasaOS-Gateway/branch/main/graph/badge.svg?token=5JIHXF1RJ4)](https://codecov.io/gh/IceWhaleTech/CasaOS-Gateway)
+[![Go Reference](https://pkg.go.dev/badge/github.com/NimoTech/NimoOS-Gateway.svg)](https://pkg.go.dev/github.com/NimoTech/NimoOS-Gateway) [![Go Report Card](https://goreportcard.com/badge/github.com/NimoTech/NimoOS-Gateway)](https://goreportcard.com/report/github.com/NimoTech/NimoOS-Gateway) [![goreleaser](https://github.com/NimoTech/NimoOS-Gateway/actions/workflows/release.yml/badge.svg)](https://github.com/NimoTech/NimoOS-Gateway/actions/workflows/release.yml) [![codecov](https://codecov.io/gh/NimoTech/NimoOS-Gateway/branch/main/graph/badge.svg?token=5JIHXF1RJ4)](https://codecov.io/gh/NimoTech/NimoOS-Gateway)
 
-CasaOS Gateway is a dynamic API gateway service that can be used to expose APIs from different other HTTP based services.
+NimoOS Gateway is a dynamic API gateway service that can be used to expose APIs from different other HTTP based services.
 
 This gateway service comes with a simple management API for other services to register their APIs by route paths. A HTTP request arrived at gateway port will be forwarded to the service that is registered for the route path.
 
@@ -15,21 +15,21 @@ Upon launching, it will search for `gateway.ini` file in the following order:
 ```bash
 ./gateway.ini
 ./conf/gateway.ini
-$HOME/.casaos/gateway.ini
-/etc/casaos/gateway.ini
+$HOME/.nimoos/gateway.ini
+/etc/nimoos/gateway.ini
 ```
 
-See [gateway.ini.sample](./build/etc/casaos/gateway.ini.sample) for default configuration.
+See [gateway.ini.sample](./build/etc/nimoos/gateway.ini.sample) for default configuration.
 
 ## Running
 
 Once running, gateway address and management address will be available in the files under `RuntimePath`  specified in configuration.
 
 ```bash
-$ cat /var/run/casaos/gateway.url 
+$ cat /var/run/nimoos/gateway.url 
 [::]:8080 # port is specified in configuration
 
-$ cat /var/run/casaos/management.url 
+$ cat /var/run/nimoos/management.url 
 [::]:34703 # port is randomly assigned
 ```
 

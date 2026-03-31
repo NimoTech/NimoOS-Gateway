@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	gatewayServiceName      = "casaos-gateway.service"
+	gatewayServiceName      = "nimoos-gateway.service"
 	gatewayServiceNameShort = "gateway"
 )
 
-//go:embedded ../../build/sysroot/etc/casaos/gateway.ini.sample
+//go:embedded ../../build/sysroot/etc/nimoos/gateway.ini.sample
 //var _gatewayINISample string
 
 var (

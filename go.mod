@@ -64,4 +64,4 @@ require (
 	gotest.tools/v3 v3.5.1
 )
 
-replace github.com/NimoTech/NimoOS-Common => ../CasaOS-Common
+replace github.com/NimoTech/NimoOS-Common => ../NimoOS-Common

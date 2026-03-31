@@ -1,5 +1,5 @@
 {
-    "name": "@icewhale/casaos-gateway-openapi",
+    "name": "@nimo/nimoos-gateway-openapi",
     "version": "0.0.1",
     "scripts": {
         "clean": "rm -rf generate",
@@ -9,12 +9,12 @@
         "generate:ts": "npx openapi-typescript-codegen --input ./api/gateway/openapi.yaml --output ./generate",
         "start": "yarn generate:local && yarn build"
     },
-    "homepage": "https://github.com/IceWhaleTech/CasaOS-Gateway#readme",
-    "description": "CasaOS Gateway Typescript+Axios SDK",
+    "homepage": "https://github.com/NimoTech/NimoOS-Gateway#readme",
+    "description": "NimoOS Gateway Typescript+Axios SDK",
     "keywords": [
-        "CasaOS",
+        "NimoOS",
         "SDK",
-        "CasaOS Axios"
+        "NimoOS Axios"
     ],
     "main": "dist/index.js",
     "files": [
@@ -33,6 +33,6 @@
         "openapi-typescript-codegen": "^0.23.0",
         "typescript": "^4.9.5"
     },
-    "author": "casaos",
+    "author": "nimoos",
     "license": "Apache-2.0"
 }

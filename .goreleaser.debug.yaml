@@ -1,6 +1,6 @@
 # This is an example .goreleaser.yml file with some sensible defaults.
 # Make sure to check the documentation at https://goreleaser.com
-project_name: casaos-gateway
+project_name: nimoos-gateway
 before:
   hooks:
     - go generate
@@ -8,8 +8,8 @@ before:
     - go mod tidy
     - go test -race -v ./...
 builds:
-  - id: casaos-gateway-amd64
-    binary: build/sysroot/usr/bin/casaos-gateway
+  - id: nimoos-gateway-amd64
+    binary: build/sysroot/usr/bin/nimoos-gateway
     env:
       - CC=x86_64-linux-gnu-gcc
     gcflags:
@@ -26,8 +26,8 @@ builds:
       - linux
     goarch:
       - amd64
-  - id: casaos-gateway-arm64
-    binary: build/sysroot/usr/bin/casaos-gateway
+  - id: nimoos-gateway-arm64
+    binary: build/sysroot/usr/bin/nimoos-gateway
     env:
       - CC=aarch64-linux-gnu-gcc
     gcflags:
@@ -44,8 +44,8 @@ builds:
       - linux
     goarch:
       - arm64
-  - id: casaos-gateway-arm-7
-    binary: build/sysroot/usr/bin/casaos-gateway
+  - id: nimoos-gateway-arm-7
+    binary: build/sysroot/usr/bin/nimoos-gateway
     env:
       - CC=arm-linux-gnueabihf-gcc
     gcflags:
@@ -64,8 +64,8 @@ builds:
       - arm
     goarm:
       - "7"
-  - id: casaos-gateway-riscv64
-    binary: build/sysroot/usr/bin/casaos-gateway
+  - id: nimoos-gateway-riscv64
+    binary: build/sysroot/usr/bin/nimoos-gateway
     env:
       - CC=riscv64-linux-gnu-gcc
     gcflags:
@@ -82,8 +82,8 @@ builds:
       - linux
     goarch:
       - riscv64
-  - id: casaos-gateway-migration-tool-amd64
-    binary: build/sysroot/usr/bin/casaos-gateway-migration-tool
+  - id: nimoos-gateway-migration-tool-amd64
+    binary: build/sysroot/usr/bin/nimoos-gateway-migration-tool
     main: ./cmd/migration-tool
     env:
       - CC=x86_64-linux-gnu-gcc
@@ -101,8 +101,8 @@ builds:
       - linux
     goarch:
       - amd64
-  - id: casaos-gateway-migration-tool-arm64
-    binary: build/sysroot/usr/bin/casaos-gateway-migration-tool
+  - id: nimoos-gateway-migration-tool-arm64
+    binary: build/sysroot/usr/bin/nimoos-gateway-migration-tool
     main: ./cmd/migration-tool
     env:
       - CC=aarch64-linux-gnu-gcc
@@ -120,8 +120,8 @@ builds:
       - linux
     goarch:
       - arm64
-  - id: casaos-gateway-migration-tool-arm-7
-    binary: build/sysroot/usr/bin/casaos-gateway-migration-tool
+  - id: nimoos-gateway-migration-tool-arm-7
+    binary: build/sysroot/usr/bin/nimoos-gateway-migration-tool
     main: ./cmd/migration-tool
     env:
       - CC=arm-linux-gnueabihf-gcc
@@ -141,8 +141,8 @@ builds:
       - arm
     goarm:
       - "7"
-  - id: casaos-gateway-migration-tool-riscv64
-    binary: build/sysroot/usr/bin/casaos-gateway-migration-tool
+  - id: nimoos-gateway-migration-tool-riscv64
+    binary: build/sysroot/usr/bin/nimoos-gateway-migration-tool
     main: ./cmd/migration-tool
     env:
       - CC=riscv64-linux-gnu-gcc
@@ -163,22 +163,22 @@ builds:
 archives:
   - name_template: >-
       {{ .Os }}-{{- if eq .Arch "arm" }}arm-7{{- else }}{{ .Arch }}{{- end }}-{{ .ProjectName }}-v{{ .Version }}
-    id: casaos-gateway
+    id: nimoos-gateway
     builds:
-      - casaos-gateway-amd64
-      - casaos-gateway-arm64
-      - casaos-gateway-arm-7
-      - casaos-gateway-riscv64
+      - nimoos-gateway-amd64
+      - nimoos-gateway-arm64
+      - nimoos-gateway-arm-7
+      - nimoos-gateway-riscv64
     files:
       - build/**/*
   - name_template: >-
       {{ .Os }}-{{- if eq .Arch "arm" }}arm-7{{- else }}{{ .Arch }}{{- end }}-{{ .ProjectName }}-migration-tool-v{{ .Version }}
-    id: casaos-gateway-migration-tool
+    id: nimoos-gateway-migration-tool
     builds:
-      - casaos-gateway-migration-tool-amd64
-      - casaos-gateway-migration-tool-arm64
-      - casaos-gateway-migration-tool-arm-7
-      - casaos-gateway-migration-tool-riscv64
+      - nimoos-gateway-migration-tool-amd64
+      - nimoos-gateway-migration-tool-arm64
+      - nimoos-gateway-migration-tool-arm-7
+      - nimoos-gateway-migration-tool-riscv64
     files:
       - build/sysroot/etc/**/*
 checksum:
@@ -193,8 +193,8 @@ changelog:
       - "^test:"
 release:
   github:
-    owner: IceWhaleTech
-    name: CasaOS-Gateway
+    owner: NimoTech
+    name: NimoOS-Gateway
   draft: true
   prerelease: auto
   mode: replace

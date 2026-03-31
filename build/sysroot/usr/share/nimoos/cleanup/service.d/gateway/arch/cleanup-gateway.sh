@@ -2,15 +2,15 @@
 
 set -e
 
-readonly CASA_EXEC=casaos-gateway
-readonly CASA_SERVICE=casaos-gateway.service
+readonly CASA_EXEC=nimoos-gateway
+readonly CASA_SERVICE=nimoos-gateway.service
 
 CASA_SERVICE_PATH=$(systemctl show ${CASA_SERVICE} --no-pager  --property FragmentPath | cut -d'=' -sf2)
 readonly CASA_SERVICE_PATH
 
 CASA_CONF=$( grep -i ConditionFileNotEmpty "${CASA_SERVICE_PATH}" | cut -d'=' -sf2)
 if [[ -z "${CASA_CONF}" ]]; then
-    CASA_CONF=/etc/casaos/gateway.ini
+    CASA_CONF=/etc/nimoos/gateway.ini
 fi
 
 readonly aCOLOUR=(
@@ -58,8 +58,8 @@ systemctl disable --now "${CASA_SERVICE}" || Show 3 "Failed to disable ${CASA_SE
 rm -rvf "$(which ${CASA_EXEC})" || Show 3 "Failed to remove ${CASA_EXEC}"
 rm -rvf "${CASA_CONF}" || Show 3 "Failed to remove ${CASA_CONF}"
 
-rm -rvf /var/run/casaos/gateway.pid
-rm -rvf /var/run/casaos/management.url
-rm -rvf /var/run/casaos/routes.json
-rm -rvf /var/run/casaos/static.url
-rm -rvf /var/lib/casaos/www
+rm -rvf /var/run/nimoos/gateway.pid
+rm -rvf /var/run/nimoos/management.url
+rm -rvf /var/run/nimoos/routes.json
+rm -rvf /var/run/nimoos/static.url
+rm -rvf /var/lib/nimoos/www

@@ -1,0 +1,13 @@
+[Unit]
+After=network.target
+Description=NimoOS Gateway
+
+[Service]
+ExecStartPre=/usr/bin/nimoos-gateway -v
+ExecStart=/usr/bin/nimoos-gateway
+PIDFile=/var/run/nimoos/gateway.pid
+Restart=always
+Type=notify
+
+[Install]
+WantedBy=multi-user.target

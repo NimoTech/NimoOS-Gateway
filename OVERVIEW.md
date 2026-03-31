@@ -1,6 +1,6 @@
-# CasaOS-Gateway 详解
+# NimoOS-Gateway 详解
 
-CasaOS-Gateway 是系统的 API 网关，所有外部 HTTP 请求的唯一入口，负责动态路由、反向代理和静态资源服务。
+NimoOS-Gateway 是系统的 API 网关，所有外部 HTTP 请求的唯一入口，负责动态路由、反向代理和静态资源服务。
 
 ---
 
@@ -18,7 +18,7 @@ CasaOS-Gateway 是系统的 API 网关，所有外部 HTTP 请求的唯一入口
 ## 目录结构
 
 ```
-CasaOS-Gateway/
+NimoOS-Gateway/
 ├── main.go                  # 启动入口（Uber FX 依赖注入）
 ├── service/
 │   ├── management.go        # 路由管理（注册、查找、持久化）
@@ -51,7 +51,7 @@ CasaOS-Gateway/
 3. 外部请求到达时，按路径最长前缀匹配找到对应代理
 4. 使用 Go 标准库 `httputil.ReverseProxy` 转发请求
 
-**路径持久化**：路由保存在 `/var/run/casaos/routes.json`，重启后自动恢复。
+**路径持久化**：路由保存在 `/var/run/nimoos/routes.json`，重启后自动恢复。
 
 ---
 
@@ -69,7 +69,7 @@ CasaOS-Gateway/
 
 ## 安全机制
 
-- **JWT 验证**：ECDSA 公钥，来自 CasaOS-UserService
+- **JWT 验证**：ECDSA 公钥，来自 NimoOS-UserService
 - **Localhost 免验证**：来自 127.0.0.1 / ::1 的请求跳过 JWT 校验
 - **IP 防伪造**：校验 `X-Forwarded-For` 头，防止攻击者注入 IP
 
@@ -88,11 +88,11 @@ CasaOS-Gateway/
 
 | 文件 | 内容 |
 |---|---|
-| `/var/run/casaos/management.url` | 管理服务地址 |
-| `/var/run/casaos/gateway.url` | 网关服务地址 |
-| `/var/run/casaos/static.url` | 静态资源服务地址 |
-| `/var/run/casaos/routes.json` | 持久化路由表 |
-| `/var/run/casaos/casaos.pub` | JWT ECDSA 公钥 |
+| `/var/run/nimoos/management.url` | 管理服务地址 |
+| `/var/run/nimoos/gateway.url` | 网关服务地址 |
+| `/var/run/nimoos/static.url` | 静态资源服务地址 |
+| `/var/run/nimoos/routes.json` | 持久化路由表 |
+| `/var/run/nimoos/nimoos.pub` | JWT ECDSA 公钥 |
 
 ---
 
@@ -100,7 +100,7 @@ CasaOS-Gateway/
 
 ```ini
 [common]
-RuntimePath = /var/run/casaos
+RuntimePath = /var/run/nimoos
 
 [gateway]
 port =                 # 留空自动探测（优先 80，备选 8080）
