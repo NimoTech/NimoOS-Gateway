@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	interfaces "github.com/IceWhaleTech/CasaOS-Common"
-	"github.com/IceWhaleTech/CasaOS-Common/utils/systemctl"
-	"github.com/IceWhaleTech/CasaOS-Gateway/common"
+	interfaces "github.com/NimoTech/NimoOS-Common"
+	"github.com/NimoTech/NimoOS-Common/utils/systemctl"
+	"github.com/NimoTech/NimoOS-Gateway/common"
 )
 
 const (

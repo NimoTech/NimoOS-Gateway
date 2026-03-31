@@ -9,11 +9,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/IceWhaleTech/CasaOS-Common/utils/logger"
+	"github.com/NimoTech/NimoOS-Common/utils/logger"
 	"github.com/labstack/echo/v4"
 
-	"github.com/IceWhaleTech/CasaOS-Common/model"
-	"github.com/IceWhaleTech/CasaOS-Gateway/service"
+	"github.com/NimoTech/NimoOS-Common/model"
+	"github.com/NimoTech/NimoOS-Gateway/service"
 	"gotest.tools/v3/assert"
 )
 

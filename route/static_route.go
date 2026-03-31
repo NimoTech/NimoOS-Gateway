@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/IceWhaleTech/CasaOS-Gateway/service"
+	"github.com/NimoTech/NimoOS-Gateway/service"
 	"github.com/labstack/echo/v4"
 	echo_middleware "github.com/labstack/echo/v4/middleware"
 )
