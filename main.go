@@ -333,9 +333,11 @@ func reloadGateway(port string, route *http.ServeMux) error {
 
 	// start new gateway
 	gatewayNew := &http.Server{
-		Addr:              addr,
-		Handler:           route,
-		ReadHeaderTimeout: 5 * time.Second,
+		Addr:    addr,
+		Handler: route,
+		// Increased from 5s to allow large file uploads (multipart form data) to
+		// pass through the reverse proxy without triggering ECONNRESET.
+		ReadHeaderTimeout: 30 * time.Second,
 	}
 
 	go func() {
