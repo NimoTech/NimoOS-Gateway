@@ -2,17 +2,34 @@ package service
 
 import (
 	"encoding/json"
+	"net"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/NimoTech/NimoOS-Common/model"
 	"github.com/NimoTech/NimoOS-Common/utils/logger"
 	"go.uber.org/zap"
 )
+
+// uploadTransport is a custom transport optimized for large file uploads.
+var uploadTransport = &http.Transport{
+	DialContext: (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext,
+	MaxIdleConns:          100,
+	MaxIdleConnsPerHost:   20,
+	IdleConnTimeout:       120 * time.Second,
+	ResponseHeaderTimeout: 300 * time.Second,
+	WriteBufferSize:       256 * 1024,
+	ReadBufferSize:        256 * 1024,
+}
 
 const RoutesFile = "routes.json"
 
@@ -41,7 +58,10 @@ func NewManagementService(state *State) *Management {
 			logger.Error("Failed to parse target", zap.Any("error", err), zap.String("target", target))
 			continue
 		}
-		pathReverseProxyMap[path] = httputil.NewSingleHostReverseProxy(targetURL)
+		proxy := httputil.NewSingleHostReverseProxy(targetURL)
+		proxy.Transport = uploadTransport
+		proxy.FlushInterval = -1 // Stream responses immediately
+		pathReverseProxyMap[path] = proxy
 	}
 
 	return &Management{
@@ -58,7 +78,10 @@ func (g *Management) CreateRoute(route *model.Route) error {
 	}
 
 	g.pathTargetMap[route.Path] = route.Target
-	g.pathReverseProxyMap[route.Path] = httputil.NewSingleHostReverseProxy(url)
+	proxy := httputil.NewSingleHostReverseProxy(url)
+	proxy.Transport = uploadTransport
+	proxy.FlushInterval = -1
+	g.pathReverseProxyMap[route.Path] = proxy
 
 	routesFilePath := filepath.Join(g.State.GetRuntimePath(), RoutesFile)
 
