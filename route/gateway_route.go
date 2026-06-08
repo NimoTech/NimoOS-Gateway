@@ -68,8 +68,13 @@ func (g *GatewayRoute) GetRoute() *http.ServeMux {
 	gatewayMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD")
+		// tus resumable upload needs its protocol request headers allowed, and its
+		// response headers exposed so tus-js-client can read the upload URL (Location)
+		// and resume offset (Upload-Offset) cross-origin. Without these, cross-origin
+		// tus uploads fail the preflight or cannot resume.
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Tus-Resumable, Upload-Length, Upload-Offset, Upload-Metadata, Upload-Concat, Upload-Defer-Length, X-HTTP-Method-Override")
+		w.Header().Set("Access-Control-Expose-Headers", "Location, Upload-Offset, Upload-Length, Tus-Resumable, Tus-Version, Tus-Extension, Tus-Max-Size, Upload-Metadata, Upload-Concat, Upload-Defer-Length")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
