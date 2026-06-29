@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	_ "embed"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -102,6 +105,16 @@ func init() {
 		panic(err)
 	}
 
+	sslEnabled := config.GetBool(common.ConfigKeySSLEnabled)
+	sslPort := config.GetString(common.ConfigKeySSLPort)
+	sslDomain := config.GetString(common.ConfigKeySSLDomain)
+	sslCertType := config.GetString(common.ConfigKeySSLCertType)
+
+	_state.SetSSLEnabled(sslEnabled)
+	_state.SetSSLPort(sslPort)
+	_state.SetSSLDomain(sslDomain)
+	_state.SetSSLCertType(sslCertType)
+
 	if err := _state.SetWWWPath(*wwwPathFlag); err != nil {
 		logger.Error("Failed to set www path", zap.Any("error", err), zap.String("wwwpath", *wwwPathFlag))
 		panic(err)
@@ -114,6 +127,15 @@ func init() {
 
 	_state.OnGatewayPortChange(func(port string) error {
 		config.Set(common.ConfigKeyGatewayPort, port)
+		return config.WriteConfig()
+	})
+
+	_state.OnGatewayConfigChange(func() error {
+		config.Set(common.ConfigKeyGatewayPort, _state.GetGatewayPort())
+		config.Set(common.ConfigKeySSLEnabled, _state.GetSSLEnabled())
+		config.Set(common.ConfigKeySSLPort, _state.GetSSLPort())
+		config.Set(common.ConfigKeySSLDomain, _state.GetSSLDomain())
+		config.Set(common.ConfigKeySSLCertType, _state.GetSSLCertType())
 		return config.WriteConfig()
 	})
 }
@@ -221,6 +243,27 @@ func run(
 					return err
 				}
 
+				if err := management.CreateRoute(&model.Route{
+					Path:   "/v1/gateway/ssl",
+					Target: "http://" + listener.Addr().String(),
+				}); err != nil {
+					return err
+				}
+
+				if err := management.CreateRoute(&model.Route{
+					Path:   "/v1/gateway/ssl/upload",
+					Target: "http://" + listener.Addr().String(),
+				}); err != nil {
+					return err
+				}
+
+				if err := management.CreateRoute(&model.Route{
+					Path:   "/v1/gateway/ssl/ca",
+					Target: "http://" + listener.Addr().String(),
+				}); err != nil {
+					return err
+				}
+
 				_managementServiceReady <- struct{}{}
 
 				return nil
@@ -267,11 +310,11 @@ func run(
 					}
 				}
 
-				_state.OnGatewayPortChange(func(port string) error {
-					return reloadGateway(port, route)
+				_state.OnGatewayConfigChange(func() error {
+					return reloadGateways(_state, route)
 				})
 
-				if err := reloadGateway(_state.GetGatewayPort(), route); err != nil {
+				if err := reloadGateways(_state, route); err != nil {
 					return err
 				}
 
@@ -318,7 +361,96 @@ func run(
 	})
 }
 
-func reloadGateway(port string, route *http.ServeMux) error {
+var _sslGateway *http.Server
+
+func reloadGateways(state *service.State, route *http.ServeMux) error {
+	httpPort := state.GetGatewayPort()
+	if httpPort != "" {
+		if err := reloadHTTPGateway(httpPort, route); err != nil {
+			return err
+		}
+	} else {
+		if _gateway != nil {
+			gatewayOld := _gateway
+			_gateway = nil
+			go func() {
+				logger.Info("Stopping HTTP gateway...", zap.Any("address", gatewayOld.Addr))
+				if err := gatewayOld.Shutdown(context.Background()); err != nil {
+					logger.Error("Error when stopping HTTP gateway", zap.Any("error", err), zap.Any("address", gatewayOld.Addr))
+				}
+			}()
+		}
+	}
+
+	sslEnabled := state.GetSSLEnabled()
+	sslPort := state.GetSSLPort()
+
+	if sslEnabled && sslPort != "" {
+		certDir := filepath.Join(constants.DefaultConfigPath, "certs")
+		certFile := filepath.Join(certDir, "gateway.crt")
+		keyFile := filepath.Join(certDir, "gateway.key")
+
+		if state.GetSSLCertType() == "auto" {
+			needsGeneration := false
+			caCertFile := filepath.Join(certDir, "ca.crt")
+			if _, err := os.Stat(certFile); os.IsNotExist(err) {
+				needsGeneration = true
+			} else if _, err := os.Stat(caCertFile); os.IsNotExist(err) {
+				needsGeneration = true
+			} else {
+				if nb, _, err := service.GetCertDates(certFile); err != nil || time.Now().After(nb.Add(365*24*time.Hour*10)) {
+					needsGeneration = true
+				} else {
+					certBytes, err := os.ReadFile(certFile)
+					if err == nil {
+						block, _ := pem.Decode(certBytes)
+						if block != nil {
+							cert, err := x509.ParseCertificate(block.Bytes)
+							if err == nil && cert.Subject.CommonName != state.GetSSLDomain() {
+								needsGeneration = true
+							}
+						}
+					}
+				}
+			}
+
+			if needsGeneration {
+				logger.Info("Generating self-signed certificate...", zap.String("domain", state.GetSSLDomain()))
+				if err := service.GenerateSelfSignedCert(certFile, keyFile, state.GetSSLDomain()); err != nil {
+					logger.Error("Failed to generate self-signed certificate", zap.Error(err))
+					return err
+				}
+			}
+		}
+
+		if err := reloadHTTPSGateway(sslPort, route, certFile, keyFile); err != nil {
+			return err
+		}
+	} else {
+		if _sslGateway != nil {
+			sslGatewayOld := _sslGateway
+			_sslGateway = nil
+			go func() {
+				logger.Info("Stopping SSL gateway...", zap.Any("address", sslGatewayOld.Addr))
+				if err := sslGatewayOld.Shutdown(context.Background()); err != nil {
+					logger.Error("Error when stopping SSL gateway", zap.Any("error", err), zap.Any("address", sslGatewayOld.Addr))
+				}
+			}()
+		}
+	}
+
+	return nil
+}
+
+func reloadHTTPGateway(port string, route *http.ServeMux) error {
+	if _gateway != nil {
+		_, runningPort, err := net.SplitHostPort(_gateway.Addr)
+		if err == nil && runningPort == port {
+			logger.Info("HTTP Port is the same as current running gateway - no change is required")
+			return nil
+		}
+	}
+
 	listener, err := net.Listen("tcp", net.JoinHostPort("", port))
 	if err != nil {
 		return err
@@ -326,17 +458,9 @@ func reloadGateway(port string, route *http.ServeMux) error {
 
 	addr := listener.Addr().String()
 
-	if _gateway != nil && _gateway.Addr == addr {
-		logger.Info("Port is the same as current running gateway - no change is required")
-		return nil
-	}
-
-	// start new gateway
 	gatewayNew := &http.Server{
-		Addr:    addr,
-		Handler: route,
-		// Increased from 5s to allow large file uploads (multipart form data) to
-		// pass through the reverse proxy without triggering ECONNRESET.
+		Addr:              addr,
+		Handler:           route,
 		ReadHeaderTimeout: 30 * time.Second,
 	}
 
@@ -344,36 +468,121 @@ func reloadGateway(port string, route *http.ServeMux) error {
 		err := gatewayNew.Serve(listener)
 		if err != nil {
 			if errors.Is(err, http.ErrServerClosed) {
-				logger.Info("A gateway is stopped", zap.Any("address", gatewayNew.Addr))
+				logger.Info("HTTP gateway is stopped", zap.Any("address", gatewayNew.Addr))
 				return
 			}
-			logger.Error("Error when serving a gateway", zap.Any("error", err), zap.Any("address", gatewayNew.Addr))
+			logger.Error("Error when serving HTTP gateway", zap.Any("error", err), zap.Any("address", gatewayNew.Addr))
 		}
 	}()
 
-	// test if gateway is running
-	url := "http://" + addr + "/ping"
+	url := "http://127.0.0.1:" + port + "/ping"
 	if err := checkURLWithRetry(url, 10); err != nil {
 		return err
 	}
 
-	logger.Info("New gateway is listening...", zap.Any("address", gatewayNew.Addr))
+	logger.Info("New HTTP gateway is listening...", zap.Any("address", gatewayNew.Addr))
 
-	// stop old gateway
 	if _gateway != nil {
 		gatewayOld := _gateway
 		go func() {
-			logger.Info("Stopping previous gateway in 1 seconds...", zap.Any("address", gatewayOld.Addr))
-			time.Sleep(time.Second) // so that any request to the old gateway gets a response
+			logger.Info("Stopping previous HTTP gateway in 1 seconds...", zap.Any("address", gatewayOld.Addr))
+			time.Sleep(time.Second)
 			if err := gatewayOld.Shutdown(context.Background()); err != nil {
-				logger.Error("Error when stopping previous gateway", zap.Any("error", err), zap.Any("address", gatewayOld.Addr))
+				logger.Error("Error when stopping previous HTTP gateway", zap.Any("error", err), zap.Any("address", gatewayOld.Addr))
 			}
 		}()
 	}
 
 	_gateway = gatewayNew
-
 	return nil
+}
+
+func reloadHTTPSGateway(port string, route *http.ServeMux, certFile, keyFile string) error {
+	if _sslGateway != nil {
+		_, runningPort, err := net.SplitHostPort(_sslGateway.Addr)
+		if err == nil && runningPort == port {
+			logger.Info("HTTPS Port is the same as current running gateway - no change is required")
+			return nil
+		}
+	}
+
+	listener, err := net.Listen("tcp", net.JoinHostPort("", port))
+	if err != nil {
+		return err
+	}
+
+	addr := listener.Addr().String()
+
+	sslGatewayNew := &http.Server{
+		Addr:              addr,
+		Handler:           route,
+		ReadHeaderTimeout: 30 * time.Second,
+	}
+
+	go func() {
+		err := sslGatewayNew.ServeTLS(listener, certFile, keyFile)
+		if err != nil {
+			if errors.Is(err, http.ErrServerClosed) {
+				logger.Info("HTTPS gateway is stopped", zap.Any("address", sslGatewayNew.Addr))
+				return
+			}
+			logger.Error("Error when serving HTTPS gateway", zap.Any("error", err), zap.Any("address", sslGatewayNew.Addr))
+		}
+	}()
+
+	url := "https://127.0.0.1:" + port + "/ping"
+	if err := checkHTTPSURLWithRetry(url, 10); err != nil {
+		return err
+	}
+
+	logger.Info("New HTTPS gateway is listening...", zap.Any("address", sslGatewayNew.Addr))
+
+	if _sslGateway != nil {
+		sslGatewayOld := _sslGateway
+		go func() {
+			logger.Info("Stopping previous HTTPS gateway in 1 seconds...", zap.Any("address", sslGatewayOld.Addr))
+			time.Sleep(time.Second)
+			if err := sslGatewayOld.Shutdown(context.Background()); err != nil {
+				logger.Error("Error when stopping previous HTTPS gateway", zap.Any("error", err), zap.Any("address", sslGatewayOld.Addr))
+			}
+		}()
+	}
+
+	_sslGateway = sslGatewayNew
+	return nil
+}
+
+func checkHTTPSURL(urlStr string) error {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr, Timeout: 5 * time.Second}
+	response, err := client.Get(urlStr)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return ErrCheckURLNotOK
+	}
+	return nil
+}
+
+func checkHTTPSURLWithRetry(url string, retry uint) error {
+	count := retry
+	var err error
+
+	for count >= 0 {
+		logger.Info("Checking if SSL service at URL is running...", zap.Any("url", url), zap.Any("retry", count))
+		if err = checkHTTPSURL(url); err != nil {
+			time.Sleep(time.Second)
+			count--
+			continue
+		}
+		break
+	}
+
+	return err
 }
 
 func checkURLWithRetry(url string, retry uint) error {

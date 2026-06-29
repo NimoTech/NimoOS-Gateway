@@ -17,6 +17,11 @@ const (
 	ConfigKeyGatewayPort = "gateway.Port"
 	ConfigKeyRuntimePath = "common.RuntimePath"
 
+	ConfigKeySSLEnabled  = "gateway.SSLEnabled"
+	ConfigKeySSLPort     = "gateway.SSLPort"
+	ConfigKeySSLDomain   = "gateway.SSLDomain"
+	ConfigKeySSLCertType = "gateway.SSLCertType"
+
 	GatewayName       = "gateway"
 	GatewayConfigType = "ini"
 )
@@ -29,6 +34,10 @@ func LoadConfig() (*viper.Viper, error) {
 	config.SetDefault(ConfigKeyLogFileExt, "log")
 
 	config.SetDefault(ConfigKeyRuntimePath, constants.DefaultRuntimePath) // See https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch05s13.html
+	config.SetDefault(ConfigKeySSLEnabled, false)
+	config.SetDefault(ConfigKeySSLPort, "443")
+	config.SetDefault(ConfigKeySSLDomain, "nimoos.local")
+	config.SetDefault(ConfigKeySSLCertType, "auto")
 
 	config.SetConfigName(GatewayName)
 	config.SetConfigType(GatewayConfigType)

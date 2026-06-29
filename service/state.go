@@ -4,14 +4,25 @@ type State struct {
 	gatewayPort         string
 	onGatewayPortChange []func(string) error
 
+	sslEnabled            bool
+	sslPort               string
+	sslDomain             string
+	sslCertType           string
+	onGatewayConfigChange []func() error
+
 	runtimePath string
 	wwwPath     string
 }
 
 func NewState() *State {
 	return &State{
-		gatewayPort:         "",
-		onGatewayPortChange: make([]func(string) error, 0),
+		gatewayPort:           "",
+		onGatewayPortChange:   make([]func(string) error, 0),
+		sslEnabled:            false,
+		sslPort:               "",
+		sslDomain:             "",
+		sslCertType:           "",
+		onGatewayConfigChange: make([]func() error, 0),
 
 		runtimePath: "",
 		wwwPath:     "",
@@ -24,7 +35,10 @@ func (c *State) SetGatewayPort(port string) (err error) {
 			c.gatewayPort = port
 		}
 	}()
-	return c.notifyOnGatewayPortChange(port)
+	if err := c.notifyOnGatewayPortChange(port); err != nil {
+		return err
+	}
+	return c.notifyOnGatewayConfigChange()
 }
 
 func (c *State) GetGatewayPort() string {
@@ -44,6 +58,55 @@ func (c *State) notifyOnGatewayPortChange(port string) error {
 	}
 
 	return nil
+}
+
+func (c *State) OnGatewayConfigChange(f func() error) {
+	c.onGatewayConfigChange = append(c.onGatewayConfigChange, f)
+}
+
+func (c *State) notifyOnGatewayConfigChange() error {
+	for i := len(c.onGatewayConfigChange) - 1; i >= 0; i-- {
+		if err := c.onGatewayConfigChange[i](); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *State) SetSSLEnabled(enabled bool) error {
+	c.sslEnabled = enabled
+	return c.notifyOnGatewayConfigChange()
+}
+
+func (c *State) GetSSLEnabled() bool {
+	return c.sslEnabled
+}
+
+func (c *State) SetSSLPort(port string) error {
+	c.sslPort = port
+	return c.notifyOnGatewayConfigChange()
+}
+
+func (c *State) GetSSLPort() string {
+	return c.sslPort
+}
+
+func (c *State) SetSSLDomain(domain string) error {
+	c.sslDomain = domain
+	return c.notifyOnGatewayConfigChange()
+}
+
+func (c *State) GetSSLDomain() string {
+	return c.sslDomain
+}
+
+func (c *State) SetSSLCertType(certType string) error {
+	c.sslCertType = certType
+	return c.notifyOnGatewayConfigChange()
+}
+
+func (c *State) GetSSLCertType() string {
+	return c.sslCertType
 }
 
 func (c *State) SetRuntimePath(path string) error {
