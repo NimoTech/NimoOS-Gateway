@@ -89,6 +89,18 @@ func (g *GatewayRoute) GetRoute() *http.ServeMux {
 			return
 		}
 
+		// Never proxy internal endpoints. Downstream services mount
+		// secret-returning handlers under `/_internal/` guarded only by a
+		// LocalhostOnly check; because the gateway forwards from loopback,
+		// that check would be satisfied for any external caller. Refuse the
+		// whole class here — no service registers a public `_internal` route.
+		// 404 (not 403) matches the not-found branch below and avoids
+		// confirming the endpoint exists.
+		if strings.Contains(r.URL.Path, "/_internal/") {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
 		proxy := g.management.GetProxy(r.URL.Path)
 
 		if proxy == nil {
