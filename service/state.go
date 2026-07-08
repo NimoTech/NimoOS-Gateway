@@ -12,6 +12,11 @@ type State struct {
 
 	runtimePath string
 	wwwPath     string
+
+	qdrantURL    string
+	ollamaURL    string
+	dockerSocket string
+	photosMLURL  string
 }
 
 func NewState() *State {
@@ -26,6 +31,11 @@ func NewState() *State {
 
 		runtimePath: "",
 		wwwPath:     "",
+
+		qdrantURL:    "",
+		ollamaURL:    "",
+		dockerSocket: "",
+		photosMLURL:  "",
 	}
 }
 
@@ -126,3 +136,12 @@ func (c *State) SetWWWPath(path string) error {
 func (c *State) GetWWWPath() string {
 	return c.wwwPath
 }
+
+func (s *State) GetQdrantURL() string     { return s.qdrantURL }
+func (s *State) SetQdrantURL(v string)    { s.qdrantURL = v }
+func (s *State) GetOllamaURL() string     { return s.ollamaURL }
+func (s *State) SetOllamaURL(v string)    { s.ollamaURL = v }
+func (s *State) GetDockerSocket() string  { return s.dockerSocket }
+func (s *State) SetDockerSocket(v string) { s.dockerSocket = v }
+func (s *State) GetPhotosMLURL() string   { return s.photosMLURL }
+func (s *State) SetPhotosMLURL(v string)  { s.photosMLURL = v }

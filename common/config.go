@@ -22,6 +22,11 @@ const (
 	ConfigKeySSLDomain   = "gateway.SSLDomain"
 	ConfigKeySSLCertType = "gateway.SSLCertType"
 
+	ConfigKeyQdrantURL    = "components.QdrantURL"
+	ConfigKeyOllamaURL    = "components.OllamaURL"
+	ConfigKeyDockerSocket = "components.DockerSocket"
+	ConfigKeyPhotosMLURL  = "components.PhotosMLURL"
+
 	GatewayName       = "gateway"
 	GatewayConfigType = "ini"
 )
@@ -38,6 +43,11 @@ func LoadConfig() (*viper.Viper, error) {
 	config.SetDefault(ConfigKeySSLPort, "443")
 	config.SetDefault(ConfigKeySSLDomain, "nimoos.local")
 	config.SetDefault(ConfigKeySSLCertType, "auto")
+
+	config.SetDefault(ConfigKeyQdrantURL, "http://127.0.0.1:6333")
+	config.SetDefault(ConfigKeyOllamaURL, "http://127.0.0.1:11434")
+	config.SetDefault(ConfigKeyDockerSocket, "/var/run/docker.sock")
+	config.SetDefault(ConfigKeyPhotosMLURL, "http://127.0.0.1:3003")
 
 	config.SetConfigName(GatewayName)
 	config.SetConfigType(GatewayConfigType)

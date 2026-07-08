@@ -120,6 +120,11 @@ func init() {
 		panic(err)
 	}
 
+	_state.SetQdrantURL(config.GetString(common.ConfigKeyQdrantURL))
+	_state.SetOllamaURL(config.GetString(common.ConfigKeyOllamaURL))
+	_state.SetDockerSocket(config.GetString(common.ConfigKeyDockerSocket))
+	_state.SetPhotosMLURL(config.GetString(common.ConfigKeyPhotosMLURL))
+
 	if err := checkPrequisites(_state); err != nil {
 		logger.Error("Failed to check prequisites", zap.Any("error", err))
 		panic(err)
@@ -238,6 +243,13 @@ func run(
 
 				if err := management.CreateRoute(&model.Route{
 					Path:   "/v1/gateway/port",
+					Target: "http://" + listener.Addr().String(),
+				}); err != nil {
+					return err
+				}
+
+				if err := management.CreateRoute(&model.Route{
+					Path:   "/v1/gateway/components",
 					Target: "http://" + listener.Addr().String(),
 				}); err != nil {
 					return err
