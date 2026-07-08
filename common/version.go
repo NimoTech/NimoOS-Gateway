@@ -1,3 +1,3 @@
 package common
 
-const Version = "1.9.2-alpha1"
+var Version = "dev"
