@@ -36,7 +36,7 @@ type componentSpec struct {
 // available even when a component is offline (unlike probe results).
 var componentManifest = []componentSpec{
 	{Name: "Gateway", Category: "service", Local: true},
-	{Name: "NimoOS Core", Category: "service", VersionPath: "/v1/sys/version"},
+	{Name: "NimoOS Core", Category: "service", VersionPath: "/v1/sys/component/version"},
 	{Name: "App Management", Category: "service", VersionPath: "/v1/apps/version"},
 	{Name: "User Service", Category: "service", VersionPath: "/v1/users/version"},
 	{Name: "Local Storage", Category: "service", VersionPath: "/v1/storage/version"},

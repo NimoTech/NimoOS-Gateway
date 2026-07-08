@@ -19,7 +19,7 @@ func TestResolveTargetLongestPrefix(t *testing.T) {
 	if got := m.resolveTarget("/v1/search/version"); got != "http://127.0.0.1:8002" {
 		t.Fatalf("search: got %q", got)
 	}
-	if got := m.resolveTarget("/v1/sys/version"); got != "http://127.0.0.1:8001" {
+	if got := m.resolveTarget("/v1/sys/component/version"); got != "http://127.0.0.1:8001" {
 		t.Fatalf("sys: got %q", got)
 	}
 	if got := m.resolveTarget("/v1/nope/version"); got != "" {

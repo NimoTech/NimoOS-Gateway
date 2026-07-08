@@ -105,7 +105,10 @@ func (g *GatewayRoute) GetRoute() *http.ServeMux {
 		// probing only. Refuse external proxying so callers can't scan each
 		// service's precise version (a CVE-targeting information leak). Internal
 		// probes hit service targets directly, not through this proxy.
-		if strings.HasSuffix(r.URL.Path, "/version") {
+		// /v1/sys/version is an exception: it's a pre-existing, unrelated
+		// endpoint (the UI's app-update-check) that must stay externally
+		// reachable, even though it also ends in "/version".
+		if strings.HasSuffix(r.URL.Path, "/version") && r.URL.Path != "/v1/sys/version" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
