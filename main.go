@@ -248,6 +248,13 @@ func run(
 				}
 
 				if err := management.CreateRoute(&model.Route{
+					Path:   "/v1/gateway/components",
+					Target: "http://" + listener.Addr().String(),
+				}); err != nil {
+					return err
+				}
+
+				if err := management.CreateRoute(&model.Route{
 					Path:   "/v1/gateway/ssl",
 					Target: "http://" + listener.Addr().String(),
 				}); err != nil {
