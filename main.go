@@ -123,6 +123,7 @@ func init() {
 	_state.SetQdrantURL(config.GetString(common.ConfigKeyQdrantURL))
 	_state.SetOllamaURL(config.GetString(common.ConfigKeyOllamaURL))
 	_state.SetDockerSocket(config.GetString(common.ConfigKeyDockerSocket))
+	_state.SetPhotosMLURL(config.GetString(common.ConfigKeyPhotosMLURL))
 
 	if err := checkPrequisites(_state); err != nil {
 		logger.Error("Failed to check prequisites", zap.Any("error", err))

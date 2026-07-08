@@ -80,3 +80,23 @@ func TestProbeUIReadsVersionJSON(t *testing.T) {
 		t.Fatalf("ui probe: %+v", cs)
 	}
 }
+
+func TestProbeReachablePingOnlineOffline(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/ping" {
+			_, _ = w.Write([]byte("pong"))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	if err := probeReachable(srv.URL + "/ping"); err != nil {
+		t.Fatalf("expected online, got err: %v", err)
+	}
+
+	srv.Close() // now unreachable
+	if err := probeReachable(srv.URL + "/ping"); err == nil {
+		t.Fatal("expected offline error after server closed")
+	}
+}

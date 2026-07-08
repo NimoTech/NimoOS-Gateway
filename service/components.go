@@ -205,6 +205,22 @@ func probeJSONVersion(url, key string) (string, error) {
 	return "", nil // reachable but no version field -> online, blank version
 }
 
+// probeReachable GETs url and returns nil if it answers HTTP 200. Used for
+// services that have a health endpoint but expose no version (e.g. immich-ml's
+// /ping returns the plain string "pong").
+func probeReachable(url string) error {
+	client := &http.Client{Timeout: probeTimeout}
+	resp, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return &httpStatusError{resp.StatusCode}
+	}
+	return nil
+}
+
 func (g *Management) probeExternal() []ComponentStatus {
 	qdrant := ComponentStatus{Name: "Qdrant", Category: "external", ProbedAt: nowRFC3339()}
 	if v, err := probeJSONVersion(strings.TrimRight(g.State.GetQdrantURL(), "/")+"/", "version"); err != nil {
@@ -227,7 +243,16 @@ func (g *Management) probeExternal() []ComponentStatus {
 		docker.Status, docker.Version = "online", v
 	}
 
-	return []ComponentStatus{qdrant, ollama, docker}
+	// Photos ML (immich-machine-learning): health-only via /ping. It exposes no
+	// version endpoint, so Version stays blank when online.
+	photosML := ComponentStatus{Name: "Photos ML", Category: "external", ProbedAt: nowRFC3339()}
+	if err := probeReachable(strings.TrimRight(g.State.GetPhotosMLURL(), "/") + "/ping"); err != nil {
+		photosML.Status, photosML.Error = "offline", err.Error()
+	} else {
+		photosML.Status = "online"
+	}
+
+	return []ComponentStatus{qdrant, ollama, docker, photosML}
 }
 
 // probeDockerVersion talks to the Docker Engine API over its unix socket.
