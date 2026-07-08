@@ -101,6 +101,15 @@ func (g *GatewayRoute) GetRoute() *http.ServeMux {
 			return
 		}
 
+		// Component /version endpoints are for the Gateway's internal server-side
+		// probing only. Refuse external proxying so callers can't scan each
+		// service's precise version (a CVE-targeting information leak). Internal
+		// probes hit service targets directly, not through this proxy.
+		if strings.HasSuffix(r.URL.Path, "/version") {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
 		proxy := g.management.GetProxy(r.URL.Path)
 
 		if proxy == nil {
