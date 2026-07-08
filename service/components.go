@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -82,7 +84,8 @@ func (g *Management) GetComponents() []ComponentStatus {
 	for range componentManifest {
 		<-done
 	}
-	// external + ui appended in Task 16 (g.probeExternal / g.probeUI)
+	out = append(out, g.probeUI())
+	out = append(out, g.probeExternal()...)
 	return out
 }
 
@@ -157,4 +160,101 @@ func readURLFile(path string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(b))
+}
+
+// probeUI reads the deployed UI version from www/version.json.
+func (g *Management) probeUI() ComponentStatus {
+	cs := ComponentStatus{Name: "NimoOS UI", Category: "ui", ProbedAt: nowRFC3339()}
+	b, err := os.ReadFile(filepath.Join(g.State.GetWWWPath(), "version.json"))
+	if err != nil {
+		cs.Status = "offline"
+		cs.Error = "version.json not found"
+		return cs
+	}
+	var body struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(b, &body); err != nil || body.Version == "" {
+		cs.Status = "offline"
+		cs.Error = "version.json unreadable"
+		return cs
+	}
+	cs.Status = "online"
+	cs.Version = body.Version
+	return cs
+}
+
+// probeJSONVersion GETs url and extracts the value at the given JSON key.
+func probeJSONVersion(url, key string) (string, error) {
+	client := &http.Client{Timeout: probeTimeout}
+	resp, err := client.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", &httpStatusError{resp.StatusCode}
+	}
+	var m map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		return "", err
+	}
+	if v, ok := m[key].(string); ok {
+		return v, nil
+	}
+	return "", nil // reachable but no version field -> online, blank version
+}
+
+func (g *Management) probeExternal() []ComponentStatus {
+	qdrant := ComponentStatus{Name: "Qdrant", Category: "external", ProbedAt: nowRFC3339()}
+	if v, err := probeJSONVersion(strings.TrimRight(g.State.GetQdrantURL(), "/")+"/", "version"); err != nil {
+		qdrant.Status, qdrant.Error = "offline", err.Error()
+	} else {
+		qdrant.Status, qdrant.Version = "online", v
+	}
+
+	ollama := ComponentStatus{Name: "Ollama", Category: "external", ProbedAt: nowRFC3339()}
+	if v, err := probeJSONVersion(strings.TrimRight(g.State.GetOllamaURL(), "/")+"/api/version", "version"); err != nil {
+		ollama.Status, ollama.Error = "offline", err.Error()
+	} else {
+		ollama.Status, ollama.Version = "online", v
+	}
+
+	docker := ComponentStatus{Name: "Docker", Category: "external", ProbedAt: nowRFC3339()}
+	if v, err := probeDockerVersion(g.State.GetDockerSocket()); err != nil {
+		docker.Status, docker.Error = "offline", err.Error()
+	} else {
+		docker.Status, docker.Version = "online", v
+	}
+
+	return []ComponentStatus{qdrant, ollama, docker}
+}
+
+// probeDockerVersion talks to the Docker Engine API over its unix socket.
+// Go's http stdlib does not support the unix:// scheme, so we dial the socket
+// via a custom Transport.
+func probeDockerVersion(socket string) (string, error) {
+	client := &http.Client{
+		Timeout: probeTimeout,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, "unix", socket)
+			},
+		},
+	}
+	resp, err := client.Get("http://unix/version")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", &httpStatusError{resp.StatusCode}
+	}
+	var body struct {
+		Version string `json:"Version"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return "", err
+	}
+	return body.Version, nil
 }

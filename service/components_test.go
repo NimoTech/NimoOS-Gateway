@@ -3,6 +3,8 @@ package service
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -61,5 +63,20 @@ func TestGetComponentsServiceOnlineOffline(t *testing.T) {
 	}
 	if c := byName["Gateway"]; c.Status != "online" {
 		t.Fatalf("Gateway (Local) should be online: %+v", c)
+	}
+}
+
+func TestProbeUIReadsVersionJSON(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "version.json"), []byte(`{"version":"ui-1.2.3"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	st := &State{}
+	st.SetWWWPath(dir)
+	m := &Management{State: st}
+
+	cs := m.probeUI()
+	if cs.Category != "ui" || cs.Status != "online" || cs.Version != "ui-1.2.3" {
+		t.Fatalf("ui probe: %+v", cs)
 	}
 }
