@@ -120,6 +120,10 @@ func init() {
 		panic(err)
 	}
 
+	_state.SetQdrantURL(config.GetString(common.ConfigKeyQdrantURL))
+	_state.SetOllamaURL(config.GetString(common.ConfigKeyOllamaURL))
+	_state.SetDockerSocket(config.GetString(common.ConfigKeyDockerSocket))
+
 	if err := checkPrequisites(_state); err != nil {
 		logger.Error("Failed to check prequisites", zap.Any("error", err))
 		panic(err)
