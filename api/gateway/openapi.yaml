@@ -58,6 +58,66 @@ paths:
         "500":
           $ref: "#/components/responses/ResponseInternalServerError"
 
+  /device-info:
+    get:
+      summary: Get device identity
+      description: |-
+        Machine-readable device identity used by LAN discovery.
+        Intentionally unauthenticated (hostname and version only).
+      operationId: getDeviceInfo
+      security: []
+      tags:
+        - Gateway methods
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  os:
+                    type: string
+                    example: nimoos
+                  hostname:
+                    type: string
+                  version:
+                    type: string
+
+  /lan-discovery:
+    get:
+      summary: Discover NimoOS devices on the local network
+      description: |-
+        Scans the /24 subnets of local network interfaces for NimoOS
+        gateways (fingerprint: GET /ping). Scan scope is derived
+        server-side only; the endpoint takes no parameters.
+      operationId: getLanDiscovery
+      tags:
+        - Gateway methods
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  devices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        ip:
+                          type: string
+                        hostname:
+                          type: string
+                        version:
+                          type: string
+                        self:
+                          type: boolean
+                  truncated:
+                    type: boolean
+
 components:
   securitySchemes:
     access_token:
