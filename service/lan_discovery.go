@@ -1,9 +1,15 @@
 package service
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/json"
+	"io"
 	"net"
+	"net/http"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -114,4 +120,87 @@ func enumerateScanTargets() (hosts []string, selfIPs map[string]bool, truncated 
 		}
 	}
 	return hosts, selfIPs, false
+}
+
+// probePeer checks whether baseURL hosts a NimoOS gateway by fingerprinting
+// GET /ping, then enriches the hit via its unauthenticated device-info
+// endpoint. Old NimoOS versions have no device-info: they still match the
+// fingerprint and degrade to blank hostname/version.
+func probePeer(baseURL, ip string) (LanDevice, bool) {
+	client := &http.Client{Timeout: scanProbeTimeout}
+	resp, err := client.Get(baseURL + "/ping")
+	if err != nil {
+		return LanDevice{}, false
+	}
+	body, readErr := io.ReadAll(io.LimitReader(resp.Body, 256))
+	resp.Body.Close()
+	if readErr != nil || resp.StatusCode != http.StatusOK || string(body) != pingFingerprint {
+		return LanDevice{}, false
+	}
+
+	dev := LanDevice{IP: ip}
+	infoClient := &http.Client{Timeout: infoProbeTimeout}
+	infoResp, err := infoClient.Get(baseURL + "/v1/gateway/device-info")
+	if err != nil {
+		return dev, true
+	}
+	defer infoResp.Body.Close()
+	if infoResp.StatusCode != http.StatusOK {
+		return dev, true
+	}
+	var info struct {
+		OS       string `json:"os"`
+		Hostname string `json:"hostname"`
+		Version  string `json:"version"`
+	}
+	if json.NewDecoder(io.LimitReader(infoResp.Body, 4096)).Decode(&info) == nil && info.OS == "nimoos" {
+		dev.Hostname, dev.Version = info.Hostname, info.Version
+	}
+	return dev, true
+}
+
+// scanHosts probes every host concurrently (bounded by scanConcurrency) and
+// returns the NimoOS hits sorted numerically by IP. baseURLFor maps a host IP
+// to the URL to probe — production uses "http://"+ip, tests point at httptest
+// servers.
+func scanHosts(hosts []string, selfIPs map[string]bool, baseURLFor func(string) string) []LanDevice {
+	sem := make(chan struct{}, scanConcurrency)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	devices := []LanDevice{}
+	for _, h := range hosts {
+		wg.Add(1)
+		go func(h string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			dev, ok := probePeer(baseURLFor(h), h)
+			if !ok {
+				return
+			}
+			dev.Self = selfIPs[h]
+			mu.Lock()
+			devices = append(devices, dev)
+			mu.Unlock()
+		}(h)
+	}
+	wg.Wait()
+	sort.Slice(devices, func(i, j int) bool { return ipLess(devices[i].IP, devices[j].IP) })
+	return devices
+}
+
+func ipLess(a, b string) bool {
+	pa, pb := net.ParseIP(a).To4(), net.ParseIP(b).To4()
+	if pa == nil || pb == nil {
+		return a < b
+	}
+	return bytes.Compare(pa, pb) < 0
+}
+
+// ScanLAN discovers NimoOS gateways on the local /24 subnets. Scan scope is
+// derived from local interfaces only — never from caller input.
+func (g *Management) ScanLAN() LanDiscoveryResult {
+	hosts, selfIPs, truncated := enumerateScanTargets()
+	devices := scanHosts(hosts, selfIPs, func(ip string) string { return "http://" + ip })
+	return LanDiscoveryResult{Devices: devices, Truncated: truncated}
 }
