@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -103,6 +104,7 @@ func TestScanHostsIdentifiesPeers(t *testing.T) {
 		"10.0.0.4": deadURL,
 	}
 	devices := scanHosts(
+		context.Background(),
 		[]string{"10.0.0.4", "10.0.0.3", "10.0.0.2", "10.0.0.1"},
 		map[string]bool{"10.0.0.1": true},
 		func(ip string) string { return urls[ip] },
@@ -120,5 +122,24 @@ func TestScanHostsIdentifiesPeers(t *testing.T) {
 	}
 	if devices[1].Self || devices[1].Hostname != "" || devices[1].Version != "" {
 		t.Fatalf("old peer should degrade to blank info: %+v", devices[1])
+	}
+}
+
+func TestScanHostsRespectsCancelledContext(t *testing.T) {
+	newPeer := fakePeer(t, "nas-new", "1.9.9", true)
+	defer newPeer.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	devices := scanHosts(
+		ctx,
+		[]string{"10.0.0.1"},
+		map[string]bool{},
+		func(ip string) string { return newPeer.URL },
+	)
+
+	if len(devices) != 0 {
+		t.Fatalf("expected 0 devices with a cancelled context, got %d: %+v", len(devices), devices)
 	}
 }

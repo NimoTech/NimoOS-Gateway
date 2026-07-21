@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"io"
@@ -30,11 +31,12 @@ type LanDiscoveryResult struct {
 const (
 	// pingFingerprint is the exact body of GET /ping on every NimoOS gateway,
 	// including versions deployed long before this feature existed.
-	pingFingerprint  = "pong from gateway service"
-	scanProbeTimeout = 400 * time.Millisecond
-	infoProbeTimeout = time.Second
-	scanConcurrency  = 128
-	scanAddressCap   = 1024
+	pingFingerprint   = "pong from gateway service"
+	scanProbeTimeout  = 400 * time.Millisecond
+	infoProbeTimeout  = time.Second
+	scanConcurrency   = 128
+	scanAddressCap    = 1024
+	scanOverallBudget = 5 * time.Second
 )
 
 // virtualIfacePrefixes name interface families that never face the LAN.
@@ -126,9 +128,13 @@ func enumerateScanTargets() (hosts []string, selfIPs map[string]bool, truncated 
 // GET /ping, then enriches the hit via its unauthenticated device-info
 // endpoint. Old NimoOS versions have no device-info: they still match the
 // fingerprint and degrade to blank hostname/version.
-func probePeer(baseURL, ip string) (LanDevice, bool) {
+func probePeer(ctx context.Context, baseURL, ip string) (LanDevice, bool) {
 	client := &http.Client{Timeout: scanProbeTimeout}
-	resp, err := client.Get(baseURL + "/ping")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/ping", nil)
+	if err != nil {
+		return LanDevice{}, false
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return LanDevice{}, false
 	}
@@ -140,7 +146,11 @@ func probePeer(baseURL, ip string) (LanDevice, bool) {
 
 	dev := LanDevice{IP: ip}
 	infoClient := &http.Client{Timeout: infoProbeTimeout}
-	infoResp, err := infoClient.Get(baseURL + "/v1/gateway/device-info")
+	infoReq, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/v1/gateway/device-info", nil)
+	if err != nil {
+		return dev, true
+	}
+	infoResp, err := infoClient.Do(infoReq)
 	if err != nil {
 		return dev, true
 	}
@@ -163,7 +173,7 @@ func probePeer(baseURL, ip string) (LanDevice, bool) {
 // returns the NimoOS hits sorted numerically by IP. baseURLFor maps a host IP
 // to the URL to probe — production uses "http://"+ip, tests point at httptest
 // servers.
-func scanHosts(hosts []string, selfIPs map[string]bool, baseURLFor func(string) string) []LanDevice {
+func scanHosts(ctx context.Context, hosts []string, selfIPs map[string]bool, baseURLFor func(string) string) []LanDevice {
 	sem := make(chan struct{}, scanConcurrency)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -174,7 +184,10 @@ func scanHosts(hosts []string, selfIPs map[string]bool, baseURLFor func(string) 
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			dev, ok := probePeer(baseURLFor(h), h)
+			if ctx.Err() != nil {
+				return
+			}
+			dev, ok := probePeer(ctx, baseURLFor(h), h)
 			if !ok {
 				return
 			}
@@ -200,7 +213,9 @@ func ipLess(a, b string) bool {
 // ScanLAN discovers NimoOS gateways on the local /24 subnets. Scan scope is
 // derived from local interfaces only — never from caller input.
 func (g *Management) ScanLAN() LanDiscoveryResult {
+	ctx, cancel := context.WithTimeout(context.Background(), scanOverallBudget)
+	defer cancel()
 	hosts, selfIPs, truncated := enumerateScanTargets()
-	devices := scanHosts(hosts, selfIPs, func(ip string) string { return "http://" + ip })
+	devices := scanHosts(ctx, hosts, selfIPs, func(ip string) string { return "http://" + ip })
 	return LanDiscoveryResult{Devices: devices, Truncated: truncated}
 }
