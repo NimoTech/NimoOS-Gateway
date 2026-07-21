@@ -53,10 +53,11 @@ func isVirtualInterface(name string) bool {
 
 // subnetHosts lists the IPv4 host addresses to scan for one interface address,
 // narrowed to the /24 containing ip when the subnet is larger than /24.
-// Network and broadcast addresses are excluded; IPv6 and /31+/32 yield nothing.
+// Network and broadcast addresses are excluded; IPv6, link-local (RFC 3927,
+// e.g. netns veth endpoints), and /31+/32 yield nothing.
 func subnetHosts(ip net.IP, ipnet *net.IPNet) []string {
 	ip4 := ip.To4()
-	if ip4 == nil {
+	if ip4 == nil || ip4.IsLinkLocalUnicast() {
 		return nil
 	}
 	ones, bits := ipnet.Mask.Size()
@@ -105,7 +106,7 @@ func enumerateScanTargets() (hosts []string, selfIPs map[string]bool, truncated 
 				continue
 			}
 			ip4 := ipnet.IP.To4()
-			if ip4 == nil {
+			if ip4 == nil || ip4.IsLinkLocalUnicast() {
 				continue
 			}
 			selfIPs[ip4.String()] = true

@@ -63,6 +63,12 @@ func TestSubnetHostsDegenerateCases(t *testing.T) {
 	if hosts := subnetHosts(v6, v6net); len(hosts) != 0 {
 		t.Fatalf("IPv6 should yield no hosts, got %d", len(hosts))
 	}
+	// link-local (RFC 3927), e.g. the agent netns veth endpoint, must not be scanned
+	ll := net.ParseIP("169.254.7.1")
+	_, llnet, _ := net.ParseCIDR("169.254.7.0/30")
+	if hosts := subnetHosts(ll, llnet); len(hosts) != 0 {
+		t.Fatalf("link-local should yield no hosts, got %d", len(hosts))
+	}
 }
 
 func fakePeer(t *testing.T, hostname, version string, withInfo bool) *httptest.Server {
