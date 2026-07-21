@@ -212,3 +212,31 @@ func TestChangePortNegative(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, expectedPort, result.Data)
 }
+
+func TestDeviceInfoUnauthenticated(t *testing.T) {
+	defer setup(t)(t)
+
+	// deliberately no RemoteAddr and no token: this endpoint must be
+	// reachable anonymously (it is the LAN discovery identity beacon).
+	req, _ := http.NewRequest(http.MethodGet, "/v1/gateway/device-info", nil)
+	w := httptest.NewRecorder()
+	_router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var body map[string]string
+	assert.NilError(t, json.NewDecoder(w.Body).Decode(&body))
+	assert.Equal(t, "nimoos", body["os"])
+	assert.Assert(t, body["hostname"] != "")
+}
+
+func TestLanDiscoveryRequiresJWT(t *testing.T) {
+	defer setup(t)(t)
+
+	req, _ := http.NewRequest(http.MethodGet, "/v1/gateway/lan-discovery", nil)
+	req.RemoteAddr = "192.168.1.50:1234" // non-localhost -> JWT enforced
+	w := httptest.NewRecorder()
+	_router.ServeHTTP(w, req)
+
+	assert.Assert(t, w.Code == http.StatusBadRequest || w.Code == http.StatusUnauthorized, "got %d", w.Code)
+}

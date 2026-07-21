@@ -15,6 +15,7 @@ import (
 	"github.com/NimoTech/NimoOS-Common/utils/common_err"
 	"github.com/NimoTech/NimoOS-Common/utils/constants"
 	"github.com/NimoTech/NimoOS-Common/utils/jwt"
+	"github.com/NimoTech/NimoOS-Gateway/common"
 	"github.com/NimoTech/NimoOS-Gateway/service"
 	"github.com/labstack/echo/v4"
 	echo_middleware "github.com/labstack/echo/v4/middleware"
@@ -120,6 +121,45 @@ func (m *ManagementRoute) buildV1RouteGroup(v1Group *echo.Group) {
 		v1GatewayGroup.GET("/components",
 			func(ctx echo.Context) error {
 				return ctx.JSON(http.StatusOK, map[string]any{"components": m.management.GetComponents()})
+			},
+			echo_middleware.JWTWithConfig(echo_middleware.JWTConfig{
+				Skipper: func(c echo.Context) bool {
+					return c.RealIP() == "::1" || c.RealIP() == "127.0.0.1"
+				},
+				ParseTokenFunc: func(token string, c echo.Context) (interface{}, error) {
+					valid, claims, err := jwt.Validate(token, func() (*ecdsa.PublicKey, error) { return external.GetPublicKey(m.management.State.GetRuntimePath()) })
+					if err != nil || !valid {
+						return nil, echo.ErrUnauthorized
+					}
+					c.Request().Header.Set("user_id", strconv.Itoa(claims.ID))
+
+					return claims, nil
+				},
+				TokenLookupFuncs: []echo_middleware.ValuesExtractor{
+					func(c echo.Context) ([]string, error) {
+						if len(c.Request().Header.Get(echo.HeaderAuthorization)) > 0 {
+							return []string{c.Request().Header.Get(echo.HeaderAuthorization)}, nil
+						}
+						return []string{c.QueryParam("token")}, nil
+					},
+				},
+			}))
+
+		// device-info is intentionally unauthenticated: it is the identity
+		// beacon LAN discovery relies on (hostname + version only, same
+		// exposure level as commercial NAS discovery protocols).
+		v1GatewayGroup.GET("/device-info", func(ctx echo.Context) error {
+			hostname, _ := os.Hostname()
+			return ctx.JSON(http.StatusOK, echo.Map{
+				"os":       "nimoos",
+				"hostname": hostname,
+				"version":  common.Version,
+			})
+		})
+
+		v1GatewayGroup.GET("/lan-discovery",
+			func(ctx echo.Context) error {
+				return ctx.JSON(http.StatusOK, m.management.ScanLAN())
 			},
 			echo_middleware.JWTWithConfig(echo_middleware.JWTConfig{
 				Skipper: func(c echo.Context) bool {
