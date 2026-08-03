@@ -17,8 +17,6 @@
 > [SECURITY.md](https://github.com/NimoTech/NimoOS/blob/main/SECURITY.md#known-limitations)
 > before deploying NimoOS for more than one person.
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/NimoTech/NimoOS-Gateway.svg)](https://pkg.go.dev/github.com/NimoTech/NimoOS-Gateway) [![Go Report Card](https://goreportcard.com/badge/github.com/NimoTech/NimoOS-Gateway)](https://goreportcard.com/report/github.com/NimoTech/NimoOS-Gateway) [![goreleaser](https://github.com/NimoTech/NimoOS-Gateway/actions/workflows/release.yml/badge.svg)](https://github.com/NimoTech/NimoOS-Gateway/actions/workflows/release.yml) [![codecov](https://codecov.io/gh/NimoTech/NimoOS-Gateway/branch/main/graph/badge.svg?token=5JIHXF1RJ4)](https://codecov.io/gh/NimoTech/NimoOS-Gateway)
-
 NimoOS Gateway is a dynamic API gateway service that can be used to expose APIs from different other HTTP based services.
 
 This gateway service comes with a simple management API for other services to register their APIs by route paths. A HTTP request arrived at gateway port will be forwarded to the service that is registered for the route path.
@@ -90,3 +88,11 @@ $ curl localhost:8080/ping
 $ curl localhost:12345/ping
 {"message":"pong"}
 ```
+
+## Documentation
+
+See [OVERVIEW.md](./OVERVIEW.md) for architecture details.
+
+## License
+
+Apache-2.0 — see [`LICENSE`](./LICENSE) and [`NOTICE`](./NOTICE).
