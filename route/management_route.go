@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/NimoTech/NimoOS-Common/external"
@@ -111,7 +112,7 @@ func (m *ManagementRoute) buildV1RouteGroup(v1Group *echo.Group) {
 				TokenLookupFuncs: []echo_middleware.ValuesExtractor{
 					func(c echo.Context) ([]string, error) {
 						if len(c.Request().Header.Get(echo.HeaderAuthorization)) > 0 {
-							return []string{c.Request().Header.Get(echo.HeaderAuthorization)}, nil
+							return []string{strings.TrimPrefix(c.Request().Header.Get(echo.HeaderAuthorization), "Bearer ")}, nil
 						}
 						return []string{c.QueryParam("token")}, nil
 					},
@@ -138,7 +139,7 @@ func (m *ManagementRoute) buildV1RouteGroup(v1Group *echo.Group) {
 				TokenLookupFuncs: []echo_middleware.ValuesExtractor{
 					func(c echo.Context) ([]string, error) {
 						if len(c.Request().Header.Get(echo.HeaderAuthorization)) > 0 {
-							return []string{c.Request().Header.Get(echo.HeaderAuthorization)}, nil
+							return []string{strings.TrimPrefix(c.Request().Header.Get(echo.HeaderAuthorization), "Bearer ")}, nil
 						}
 						return []string{c.QueryParam("token")}, nil
 					},
@@ -177,7 +178,7 @@ func (m *ManagementRoute) buildV1RouteGroup(v1Group *echo.Group) {
 				TokenLookupFuncs: []echo_middleware.ValuesExtractor{
 					func(c echo.Context) ([]string, error) {
 						if len(c.Request().Header.Get(echo.HeaderAuthorization)) > 0 {
-							return []string{c.Request().Header.Get(echo.HeaderAuthorization)}, nil
+							return []string{strings.TrimPrefix(c.Request().Header.Get(echo.HeaderAuthorization), "Bearer ")}, nil
 						}
 						return []string{c.QueryParam("token")}, nil
 					},
@@ -232,7 +233,7 @@ func (m *ManagementRoute) buildV1RouteGroup(v1Group *echo.Group) {
 				TokenLookupFuncs: []echo_middleware.ValuesExtractor{
 					func(c echo.Context) ([]string, error) {
 						if len(c.Request().Header.Get(echo.HeaderAuthorization)) > 0 {
-							return []string{c.Request().Header.Get(echo.HeaderAuthorization)}, nil
+							return []string{strings.TrimPrefix(c.Request().Header.Get(echo.HeaderAuthorization), "Bearer ")}, nil
 						}
 						return []string{c.QueryParam("token")}, nil
 					},
@@ -317,7 +318,7 @@ func (m *ManagementRoute) buildV1RouteGroup(v1Group *echo.Group) {
 				TokenLookupFuncs: []echo_middleware.ValuesExtractor{
 					func(c echo.Context) ([]string, error) {
 						if len(c.Request().Header.Get(echo.HeaderAuthorization)) > 0 {
-							return []string{c.Request().Header.Get(echo.HeaderAuthorization)}, nil
+							return []string{strings.TrimPrefix(c.Request().Header.Get(echo.HeaderAuthorization), "Bearer ")}, nil
 						}
 						return []string{c.QueryParam("token")}, nil
 					},
@@ -443,7 +444,7 @@ func (m *ManagementRoute) buildV1RouteGroup(v1Group *echo.Group) {
 				TokenLookupFuncs: []echo_middleware.ValuesExtractor{
 					func(c echo.Context) ([]string, error) {
 						if len(c.Request().Header.Get(echo.HeaderAuthorization)) > 0 {
-							return []string{c.Request().Header.Get(echo.HeaderAuthorization)}, nil
+							return []string{strings.TrimPrefix(c.Request().Header.Get(echo.HeaderAuthorization), "Bearer ")}, nil
 						}
 						return []string{c.QueryParam("token")}, nil
 					},
