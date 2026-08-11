@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.22.5
 
 require (
-	github.com/NimoTech/NimoOS-Common v0.4.8-alpha9
+	github.com/NimoTech/NimoOS-Common v1.9.4-alpha2
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/spf13/viper v1.18.2
 	go.uber.org/fx v1.20.1
@@ -64,4 +64,3 @@ require (
 	gotest.tools/v3 v3.5.1
 )
 
-replace github.com/NimoTech/NimoOS-Common => ../NimoOS-Common

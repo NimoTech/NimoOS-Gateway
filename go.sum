@@ -1,3 +1,5 @@
+github.com/NimoTech/NimoOS-Common v1.9.4-alpha2 h1:pHnrtaEUVi8D5q8gs0ng0a/4A/J17mablo/d1pDgAe8=
+github.com/NimoTech/NimoOS-Common v1.9.4-alpha2/go.mod h1:7bG+q+sg4pf25un8pVQlAnXFLtsQZxvkjNRKTKWLs2A=
 github.com/benbjohnson/clock v1.3.1 h1:Heo0FGXzOxUHquZbraxt+tT7UXVDhesUQH5ISbsOkCQ=
 github.com/benbjohnson/clock v1.3.1/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf h1:iW4rZ826su+pqaw19uhpSCzhj44qo35pNgKFGqzDKkU=
