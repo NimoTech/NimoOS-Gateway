@@ -2,6 +2,8 @@ package route
 
 import (
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 
 	"github.com/NimoTech/NimoOS-Common/utils/logger"
@@ -95,8 +97,12 @@ func (g *GatewayRoute) GetRoute() *http.ServeMux {
 		// that check would be satisfied for any external caller. Refuse the
 		// whole class here — no service registers a public `_internal` route.
 		// 404 (not 403) matches the not-found branch below and avoids
-		// confirming the endpoint exists.
-		if strings.Contains(r.URL.Path, "/_internal/") {
+		// confirming the endpoint exists. Matched as a path segment (any
+		// case, after decoding and cleaning), not as the substring
+		// "/_internal/": the substring form let the exact `/v1/ai/_internal`
+		// and `/v1/ai/_INTERNAL/x` through. Same rule as the agent egress
+		// proxy's isInternalPath.
+		if isInternalPath(r.URL.Path) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -128,4 +134,24 @@ func (g *GatewayRoute) GetRoute() *http.ServeMux {
 	})
 
 	return gatewayMux
+}
+
+// isInternalPath reports whether p addresses an internal-only route: any path
+// segment equal to "_internal" after one round of percent-decoding, path
+// cleaning (//, ./, ../) and lower-casing. Names that merely contain the word
+// ("internal_notes", "_internals") are not internal.
+func isInternalPath(p string) bool {
+	if p == "" {
+		return false
+	}
+	if dec, err := url.PathUnescape(p); err == nil {
+		p = dec
+	}
+	clean := strings.ToLower(path.Clean("/" + p))
+	for _, seg := range strings.Split(strings.TrimPrefix(clean, "/"), "/") {
+		if seg == "_internal" {
+			return true
+		}
+	}
+	return false
 }
