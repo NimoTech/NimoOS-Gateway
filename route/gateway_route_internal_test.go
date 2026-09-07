@@ -65,6 +65,81 @@ func TestGatewayDeniesInternalPaths(t *testing.T) {
 	}
 }
 
+// TestGatewayInternalGuardMatchesSegments aligns the guard with the egress
+// proxy's isInternalPath (NimoOS-AI PR #119): "_internal" is denied as a
+// path segment — no trailing slash required, any case, and after one round
+// of percent-decoding plus path cleaning — while names that merely contain
+// the word keep flowing. The old substring test `Contains("/_internal/")`
+// let `/v1/ai/_internal` (exact) and `/v1/ai/_INTERNAL/x` through.
+func TestGatewayInternalGuardMatchesSegments(t *testing.T) {
+	mux, teardown := setupGateway(t)
+	defer teardown()
+
+	denied := []string{
+		"/v1/ai/_internal",
+		"/v1/ai/_internal?user_id=1",
+		"/v1/ai/_INTERNAL/agent/provider-credentials",
+		"/v1/ai/%5Finternal/agent/provider-credentials",
+		"/v1/ai/%5F%69nternal/agent/x",
+		"/v1/ai/_internal/",
+	}
+	for _, p := range denied {
+		req, _ := http.NewRequest(http.MethodGet, p, nil)
+		req.RemoteAddr = "127.0.0.1:0"
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code, p)
+		assert.Assert(t, w.Body.String() != "upstream reached", p)
+	}
+
+	// Dot-segment and doubled-slash spellings never reach upstream either
+	// (the mux redirects or the guard denies) — pin "not proxied".
+	for _, p := range []string{"/v1/ai//_internal/x", "/v1/ai/agent/../_internal/x", "/v1/ai/./_internal/x"} {
+		req, _ := http.NewRequest(http.MethodGet, p, nil)
+		req.RemoteAddr = "127.0.0.1:0"
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		assert.Assert(t, w.Body.String() != "upstream reached", p)
+	}
+
+	allowed := []string{
+		"/v1/ai/internal_notes",
+		"/v1/ai/_internals/x",
+		"/v1/ai/agent/x_internal/y",
+		"/v1/ai/agent/internal/y",
+	}
+	for _, p := range allowed {
+		req, _ := http.NewRequest(http.MethodGet, p, nil)
+		req.RemoteAddr = "127.0.0.1:0"
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code, p)
+		assert.Equal(t, "upstream reached", w.Body.String(), p)
+	}
+}
+
+func TestIsInternalPath(t *testing.T) {
+	cases := map[string]bool{
+		"/v1/ai/_internal/agent/x": true,
+		"/v1/ai/_internal":         true,
+		"/_internal":               true,
+		"/v1/ai/_INTERNAL/x":       true,
+		"/v1/ai/%5Finternal/x":     true,
+		"//v1/ai/_internal/x":      true,
+		"/v1/ai/./_internal/x":     true,
+		"/v1/ai/y/../_internal/x":  true,
+		"/v1/ai/internal_notes":    false,
+		"/v1/ai/_internals/x":      false,
+		"/v1/ai/x_internal/y":      false,
+		"/v1/ai/internal/y":        false,
+		"/":                        false,
+		"":                         false,
+	}
+	for in, want := range cases {
+		assert.Equal(t, want, isInternalPath(in), in)
+	}
+}
+
 func TestGatewayForwardsNonInternalPaths(t *testing.T) {
 	mux, teardown := setupGateway(t)
 	defer teardown()
